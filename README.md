@@ -4,9 +4,9 @@ The script is written within [./contosoworks/script.ps1](.contosoworks)
 
 The script is written to be able to be used with any template, simply move the script into the folder above /source/ that contains your template.xml  
 It will take the /source/ folder and create a template.pnp out of it, then apply that to the sites
-The script first prompts your credentials and creates a credentials.xml file within the same folder as the script, and can then be used on subsequent executions  
+The script first prompts your credentials and creates a credentials.xml file within the same folder as the script, and can then be used on subsequent executions
 
-```
+```Powershell
 $templateFolderPath = "./source"
 $templatePnpPath = "./template.pnp"
 $totalSites = 4

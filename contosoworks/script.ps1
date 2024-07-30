@@ -1,8 +1,8 @@
 $templateFolderPath = "./source"
 $templatePnpPath = "./template.pnp"
 $totalSites = 4
-$batchSize = 4
-$sitePrefix = "minitest"
+$batchSize = 1
+$sitePrefix = "cand05"
 $credPath = "./credentials.xml"
 $jobs = @()
 
