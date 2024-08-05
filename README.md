@@ -1,10 +1,15 @@
 ## #5 Site Generation Script
 
-The script is written within [./contosoworks/script.ps1](.contosoworks)
+The scripts are written within respective folders:  
+[./Script-one-set-hub/script.ps1](./Script-one-set-hub/script.ps1)  
+[./Script-two-repeated-hub+benefits/script.ps1](./Script-two-repeated-hub+benefits/script.ps1)  
+[./Script-three-one-hub+mult-benefits/script.ps1](./Script-three-one-hub+mult-benefits/script.ps1)
 
-The script is written to be able to be used with any template, simply move the script into the folder above /source/ that contains your template.xml  
-It will take the /source/ folder and create a template.pnp out of it, then apply that to the sites
-The script first prompts your credentials and creates a credentials.xml file within the same folder as the script, and can then be used on subsequent executions
+Script One - Generates x amount of Benefits sites while having a hard-coded HubSiteUrl within the template.xml
+Script Two - Generate 1x Hub and 1x Benefits per "total site" count linked to each other
+Script Three - Generates a single new Hub and x amount of Benefits sites all linked to that hub using {parameter:HubUrl}
+
+Below is Script One
 
 ```Powershell
 $templateFolderPath = "./source"
