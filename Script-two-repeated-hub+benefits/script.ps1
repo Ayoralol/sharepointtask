@@ -1,6 +1,5 @@
-$templateFolderPath = "./source"
-$templatePnpPath = "./template.pnp"
-$totalSites = 6 # Each makes 1 hub and 1 benefits
+$templatexmlPath = "./source/template.xml" # Had to use .xml not .pnp as when sing .pnp it said Contoso-Financial-Calendar did not exist
+$totalSites = 2 # Each makes 1 hub and 1 benefits
 $batchSize = 1 # Batch size 1 creates all sites at once, Batch size as total creates one site at a time
 $sitePrefix = "cand05-S2"
 $credPath = "./credentials.xml"
@@ -29,17 +28,14 @@ $storedCreds = Import-Clixml -Path $credPath
 $cred = $storedCreds.Credential
 $spUrl = $storedCreds.SharePointUrl
 
-# Ensure PnP PowerShell is imported in the main session
 Import-Module PnP.PowerShell
 Import-Module ThreadJob
 Connect-PnPOnline -Url $spUrl -Credentials $cred
 
-Convert-PnPFolderToSiteTemplate -Folder $templateFolderPath -Out $templatePnpPath
-
 for ($i = 0; $i -lt $totalSites; $i += $batchSize) {
     $end = [math]::Min($i + $batchSize, $totalSites)
     $jobs += Start-ThreadJob -ScriptBlock {
-        param($start, $end, $sitePrefix, $templatePnpPath, $credPath)
+        param($start, $end, $sitePrefix, $templatexmlPath, $credPath)
 
         Import-Module PnP.PowerShell
         Import-Module ThreadJob
@@ -67,7 +63,7 @@ for ($i = 0; $i -lt $totalSites; $i += $batchSize) {
                 Connect-PnPOnline -Url "${siteUrl}-HUB" -Credentials $cred
                 Write-Host "Connected to ${siteUrl}-HUB"
                 Write-Host "Applying template to sites: ${siteUrl}-HUB and $siteUrl"
-                Invoke-PnPTenantTemplate -Path $templatePnpPath -Parameters @{
+                Invoke-PnPTenantTemplate -Path $templatexmlPath -Parameters @{
                     "SiteTitle" = "$siteTitle HUB"
                     "SiteUrl" = "${siteUrl}-HUB"
                     "BenefitsSiteTitle" = $siteTitle
@@ -78,18 +74,23 @@ for ($i = 0; $i -lt $totalSites; $i += $batchSize) {
                 Write-Error "Error processing ${siteTitle}: $_"
             }
         }
-    } -ArgumentList $i, $end, $sitePrefix, $templatePnpPath, $credPath
+    } -ArgumentList $i, $end, $sitePrefix, $templatexmlPath, $credPath
 }
 
-# Wait for all jobs to complete and process their outputs
 $jobs | ForEach-Object {
-    $_ | Receive-Job -Wait -AutoRemoveJob | ForEach-Object {
-        if ($_.State -eq 'Completed') {
-            Write-Host "Job $($_.Id) completed successfully."
+    $jobResult = $_ | Receive-Job -Wait -AutoRemoveJob
+
+    if ($_.State -eq 'Completed') {
+        Write-Host "Job $($_.Id) completed successfully."
+    } else {
+        $jobError = $_ | Get-Job | Select-Object -ExpandProperty Error
+        if ($jobError) {
+            Write-Error "Job $($_.Id) failed with error: $jobError"
         } else {
-            Write-Error "Job $($_.Id) failed with error: $($_.Error)"
+            Write-Error "Job $($_.Id) failed but no error message is available."
         }
     }
 }
+
 
 Write-Host "Completed Script and Disconnected"

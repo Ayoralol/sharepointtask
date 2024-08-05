@@ -70,15 +70,19 @@ for ($i = 0; $i -lt $totalSites; $i += $batchSize) {
     } -ArgumentList $i, $end, $sitePrefix, $templatePnpPath, $credPath
 }
 
-$jobs | ForEach-Object { $_ | Receive-Job -Wait }
-
 $jobs | ForEach-Object {
+    $jobResult = $_ | Receive-Job -Wait -AutoRemoveJob
+
     if ($_.State -eq 'Completed') {
         Write-Host "Job $($_.Id) completed successfully."
     } else {
-        Write-Error "Job $($_.Id) failed."
+        $jobError = $_ | Get-Job | Select-Object -ExpandProperty Error
+        if ($jobError) {
+            Write-Error "Job $($_.Id) failed with error: $jobError"
+        } else {
+            Write-Error "Job $($_.Id) failed but no error message is available."
+        }
     }
-    Remove-Job $_
 }
 
 Write-Host "Completed Script and Disconnected"
