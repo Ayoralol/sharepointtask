@@ -37,8 +37,6 @@ for ($i = 0; $i -lt $totalSites; $i += $batchSize) {
     $jobs += Start-ThreadJob -ScriptBlock {
         param($start, $end, $sitePrefix, $templatexmlPath, $credPath)
 
-        Import-Module PnP.PowerShell
-        Import-Module ThreadJob
         $storedCreds = Import-Clixml -Path $credPath
         $cred = $storedCreds.Credential
         $adminEmail = $cred.UserName
@@ -63,6 +61,7 @@ for ($i = 0; $i -lt $totalSites; $i += $batchSize) {
                 Connect-PnPOnline -Url "${siteUrl}-HUB" -Credentials $cred
                 Write-Host "Connected to ${siteUrl}-HUB"
                 Write-Host "Applying template to sites: ${siteUrl}-HUB and $siteUrl"
+                Start-Sleep -Seconds 5
                 Invoke-PnPTenantTemplate -Path $templatexmlPath -Parameters @{
                     "SiteTitle" = "$siteTitle HUB"
                     "SiteUrl" = "${siteUrl}-HUB"

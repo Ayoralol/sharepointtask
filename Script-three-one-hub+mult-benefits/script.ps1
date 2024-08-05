@@ -1,4 +1,5 @@
 $templateFolderPath = "./source"
+$templatexmlPath = "./source/template.xml"
 $templatePnpPath = "./template.pnp"
 $totalSites = 6
 $batchSize = 2
@@ -38,7 +39,8 @@ Convert-PnPFolderToSiteTemplate -Folder $templateFolderPath -Out $templatePnpPat
 Write-Host "Creating Initial Hub + Site and applying template"
 New-PnPSite -Type CommunicationSite -Url $hubUrl -Owner $adminEmail -Title "$sitePrefix - HUB"
 New-PnPSite -Type CommunicationSite -Url $initialUrl -Owner $adminEmail -Title "$sitePrefix 0000"
-Invoke-PnPTenantTemplate -Path $templatePnpPath -parameters @{
+Start-Sleep -Seconds 5
+Invoke-PnPTenantTemplate -Path $templatexmlPath -parameters @{
     "SiteTitle" = "$sitePrefix - HUB"
     "SiteUrl" = $hubUrl
     "BenefitsSiteTitle" = "$sitePrefix 0000"
@@ -52,8 +54,6 @@ for ($i = 1; $i -lt $totalSites; $i += $batchSize) {
     $jobs += Start-ThreadJob -ScriptBlock {
         param($start, $end, $sitePrefix, $templatePnpPath, $credPath, $hubUrl)
 
-        Import-Module PnP.PowerShell
-        Import-Module ThreadJob
         $storedCreds = Import-Clixml -Path $credPath
         $cred = $storedCreds.Credential
         $adminEmail = $cred.UserName
@@ -72,6 +72,7 @@ for ($i = 1; $i -lt $totalSites; $i += $batchSize) {
                 Write-Host "Created site: $siteUrl"
                 Connect-PnPOnline -Url $siteUrl -Credentials $cred
                 write-host "Connected"
+                Start-Sleep -Seconds 5
                 Invoke-PnPSiteTemplate -Path $templatePnpPath -parameters @{"HubUrl" = $hubUrl}
                 Write-Host "Created and applied template to site: $sitePrefix$siteNumber"
             } catch {
@@ -81,15 +82,19 @@ for ($i = 1; $i -lt $totalSites; $i += $batchSize) {
     } -ArgumentList $i, $end, $sitePrefix, $templatePnpPath, $credPath, $hubUrl
 }
 
-$jobs | ForEach-Object { $_ | Receive-Job -Wait }
-
 $jobs | ForEach-Object {
+    $jobResult = $_ | Receive-Job -Wait -AutoRemoveJob
+
     if ($_.State -eq 'Completed') {
         Write-Host "Job $($_.Id) completed successfully."
     } else {
-        Write-Error "Job $($_.Id) failed."
+        $jobError = $_ | Get-Job | Select-Object -ExpandProperty Error
+        if ($jobError) {
+            Write-Error "Job $($_.Id) failed with error: $jobError"
+        } else {
+            Write-Error "Job $($_.Id) failed but no error message is available."
+        }
     }
-    Remove-Job $_
 }
 
 Write-Host "Completed Script and Disconnected"

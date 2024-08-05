@@ -54,8 +54,6 @@ for ($i = 0; $i -lt $totalSites; $i += $batchSize) {
     $jobs += Start-ThreadJob -ScriptBlock {
         param($start, $end, $sitePrefix, $templatePnpPath, $credPath)
 
-        Import-Module PnP.PowerShell
-        Import-Module ThreadJob
         $storedCreds = Import-Clixml -Path $credPath
         $cred = $storedCreds.Credential
         $adminEmail = $cred.UserName
