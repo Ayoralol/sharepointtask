@@ -83,8 +83,10 @@ for ($i = 0; $i -lt $totalSites; $i += $batchSize) {
     } -ArgumentList $i, $end, $sitePrefix, $templatePnpPath, $credPath
 }
 
+Wait-Job -Job $jobs
+
 $jobs | ForEach-Object {
-    $jobResult = $_ | Receive-Job -Wait -AutoRemoveJob
+    $jobResult = $_ | Receive-Job -AutoRemoveJob
 
     if ($_.State -eq 'Completed') {
         Write-Host "Job $($_.Id) completed successfully."
