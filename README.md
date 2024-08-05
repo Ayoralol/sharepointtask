@@ -14,9 +14,9 @@ Below is Script One
 ```Powershell
 $templateFolderPath = "./source"
 $templatePnpPath = "./template.pnp"
-$totalSites = 4
-$batchSize = 4
-$sitePrefix = "minitest"
+$totalSites = 10
+$batchSize = 5
+$sitePrefix = "cand05-S1"
 $credPath = "./credentials.xml"
 $jobs = @()
 
@@ -73,6 +73,7 @@ for ($i = 0; $i -lt $totalSites; $i += $batchSize) {
                 Write-Host "Created site: $siteUrl"
                 Connect-PnPOnline -Url $siteUrl -Credentials $cred
                 write-host "Connected"
+                Start-Sleep -Seconds 5
                 Invoke-PnPSiteTemplate -Path $templatePnpPath
                 Write-Host "Created and applied template to site: $sitePrefix$siteNumber"
             } catch {
@@ -82,15 +83,19 @@ for ($i = 0; $i -lt $totalSites; $i += $batchSize) {
     } -ArgumentList $i, $end, $sitePrefix, $templatePnpPath, $credPath
 }
 
-$jobs | ForEach-Object { $_ | Receive-Job -Wait }
-
 $jobs | ForEach-Object {
+    $jobResult = $_ | Receive-Job -Wait -AutoRemoveJob
+
     if ($_.State -eq 'Completed') {
         Write-Host "Job $($_.Id) completed successfully."
     } else {
-        Write-Error "Job $($_.Id) failed."
+        $jobError = $_ | Get-Job | Select-Object -ExpandProperty Error
+        if ($jobError) {
+            Write-Error "Job $($_.Id) failed with error: $jobError"
+        } else {
+            Write-Error "Job $($_.Id) failed but no error message is available."
+        }
     }
-    Remove-Job $_
 }
 
 Write-Host "Completed Script and Disconnected"
