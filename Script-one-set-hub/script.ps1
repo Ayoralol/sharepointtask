@@ -36,6 +36,8 @@ Connect-PnPOnline -Url $spUrl -Credentials $cred
 
 Convert-PnPFolderToSiteTemplate -Folder $templateFolderPath -Out $templatePnpPath
 
+Write-Host "Connected and Creating Sites - DONT DISCONNECT"
+
 for ($i = 0; $i -lt $totalSites; $i += $batchSize) {
     $end = [math]::Min($i + $batchSize, $totalSites)
     $jobDefinitions += [PSCustomObject]@{
@@ -83,7 +85,7 @@ foreach ($jobDef in $jobDefinitions) {
 Wait-Job -Job $jobs
 
 $jobs | ForEach-Object {
-    $jobResult = $_ | Receive-Job -AutoRemoveJob
+    $jobResult = $_ | Receive-Job -Wait -AutoRemoveJob
 
     if ($_.State -eq 'Completed') {
         Write-Host "Job $($_.Id) completed successfully."

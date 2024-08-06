@@ -44,6 +44,8 @@ for ($i = 0; $i -lt $totalSites; $i += $batchSize) {
     }
 }
 
+Write-Host "Connected and Creating Sites"
+
 foreach ($jobDef in $jobDefinitions) {
     $jobs += Start-ThreadJob -ScriptBlock {
         param($start, $end, $sitePrefix, $templatexmlPath, $credPath)
@@ -90,7 +92,7 @@ foreach ($jobDef in $jobDefinitions) {
 Wait-Job -Job $jobs
 
 $jobs | ForEach-Object {
-    $jobResult = $_ | Receive-Job -AutoRemoveJob
+    $jobResult = $_ | Receive-Job -Wait -AutoRemoveJob
 
     if ($_.State -eq 'Completed') {
         Write-Host "Job $($_.Id) completed successfully."

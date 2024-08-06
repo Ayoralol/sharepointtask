@@ -50,6 +50,8 @@ Invoke-PnPTenantTemplate -Path $templatexmlPath -parameters @{
     }
 Write-Host "Created Initial Hub + Site and applied template"
 
+Write-Host "Connected and Creating Sites - DONT DISCONNECT"
+
 for ($i = 1; $i -lt $totalSites; $i += $batchSize) {
     $end = [math]::Min($i + $batchSize, $totalSites)
     $jobDefinitions += [PSCustomObject]@{
