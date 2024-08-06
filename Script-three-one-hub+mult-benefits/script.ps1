@@ -6,6 +6,7 @@ $batchSize = 2
 $sitePrefix = "cand05-S3"
 $credPath = "./credentials.xml"
 $jobs = @()
+$jobDefinitions = @()
 
 function Get-Stored-Credential {
     param (
@@ -51,20 +52,38 @@ Write-Host "Created Initial Hub + Site and applied template"
 
 for ($i = 1; $i -lt $totalSites; $i += $batchSize) {
     $end = [math]::Min($i + $batchSize, $totalSites)
+    $jobDefinitions += [PSCustomObject]@{
+        Start = $i
+        End = $end
+        SitePrefix = $sitePrefix
+        TemplatePnpPath = $templatePnpPath
+        CredPath = $credPath
+        HubUrl = $hubUrl
+    }
+}
+
+foreach ($jobDef in $jobDefinitions) {
     $jobs += Start-ThreadJob -ScriptBlock {
         param($start, $end, $sitePrefix, $templatePnpPath, $credPath, $hubUrl)
 
-        $storedCreds = Import-Clixml -Path $credPath
+        $localStart = $start
+        $localEnd = $end
+        $localSitePrefix = $sitePrefix
+        $localTemplatePnpPath = $templatePnpPath
+        $localCredPath = $credPath
+        $localHubUrl = $hubUrl
+
+        $storedCreds = Import-Clixml -Path $localCredPath
         $cred = $storedCreds.Credential
         $adminEmail = $cred.UserName
         $spUrl = $storedCreds.SharePointUrl
         Connect-PnPOnline -Url $spUrl -Credentials $cred
 
-        for ($j = $start; $j -lt $end; $j++) {
+        for ($j = $localStart; $j -lt $localEnd; $j++) {
             try {
                 $siteNumber = "{0:D4}" -f $j
-                $siteUrl = "$spUrl/sites/$sitePrefix$siteNumber"
-                $siteTitle = "$sitePrefix $siteNumber"
+                $siteUrl = "$spUrl/sites/$localSitePrefix$siteNumber"
+                $siteTitle = "$localSitePrefix $siteNumber"
 
                 Write-Host "Creating site: $siteUrl"
                 New-PnPSite -Type CommunicationSite -Url $siteUrl -Owner $adminEmail -Title $siteTitle
@@ -73,19 +92,19 @@ for ($i = 1; $i -lt $totalSites; $i += $batchSize) {
                 Connect-PnPOnline -Url $siteUrl -Credentials $cred
                 write-host "Connected"
                 Start-Sleep -Seconds 5
-                Invoke-PnPSiteTemplate -Path $templatePnpPath -parameters @{"HubUrl" = $hubUrl}
-                Write-Host "Created and applied template to site: $sitePrefix$siteNumber"
+                Invoke-PnPSiteTemplate -Path $localTemplatePnpPath -parameters @{"HubUrl" = $localHubUrl}
+                Write-Host "Created and applied template to site: $localSitePrefix$siteNumber"
             } catch {
                 Write-Error "Error processing ${siteTitle}: $_"
             }
         }
-    } -ArgumentList $i, $end, $sitePrefix, $templatePnpPath, $credPath, $hubUrl
+    } -ArgumentList $jobDef.Start, $jobDef.End, $jobDef.SitePrefix, $jobDef.TemplatePnpPath, $jobDef.CredPath, $jobDef.HubUrl
 }
 
 Wait-Job -Job $jobs
 
 $jobs | ForEach-Object {
-    $jobResult = $_ | Receive-Job -AutoRemoveJob
+    $jobResult = $_ | Receive-Job -Wait -AutoRemoveJob
 
     if ($_.State -eq 'Completed') {
         Write-Host "Job $($_.Id) completed successfully."

@@ -4,6 +4,7 @@ $batchSize = 1 # Batch size 1 creates all sites at once, Batch size as total cre
 $sitePrefix = "cand05-S2"
 $credPath = "./credentials.xml"
 $jobs = @()
+$jobDefinitions = @()
 
 function Get-Stored-Credential {
     param (
@@ -34,6 +35,16 @@ Connect-PnPOnline -Url $spUrl -Credentials $cred
 
 for ($i = 0; $i -lt $totalSites; $i += $batchSize) {
     $end = [math]::Min($i + $batchSize, $totalSites)
+    $jobDefinitions += [PSCustomObject]@{
+        Start = $i
+        End = $end
+        SitePrefix = $sitePrefix
+        TemplateXmlPath = $templatexmlPath
+        CredPath = $credPath
+    }
+}
+
+foreach ($jobDef in $jobDefinitions) {
     $jobs += Start-ThreadJob -ScriptBlock {
         param($start, $end, $sitePrefix, $templatexmlPath, $credPath)
 
@@ -73,7 +84,7 @@ for ($i = 0; $i -lt $totalSites; $i += $batchSize) {
                 Write-Error "Error processing ${siteTitle}: $_"
             }
         }
-    } -ArgumentList $i, $end, $sitePrefix, $templatexmlPath, $credPath
+    } -ArgumentList $jobDef.Start, $jobDef.End, $jobDef.SitePrefix, $jobDef.TemplateXmlPath, $jobDef.CredPath
 }
 
 Wait-Job -Job $jobs

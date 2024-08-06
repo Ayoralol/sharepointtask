@@ -10,7 +10,6 @@
     <pnp:Parameters>
       <pnp:Parameter Key="SiteTitle">Contoso Works</pnp:Parameter>
       <pnp:Parameter Key="SiteUrl">/sites/hr-works</pnp:Parameter>
-      <pnp:Parameter Key="SiteDescription"></pnp:Parameter>
       <pnp:Parameter Key="BenefitsSiteTitle">Benefits</pnp:Parameter>
       <pnp:Parameter Key="BenefitsSiteUrl">/sites/hr-live</pnp:Parameter>
     </pnp:Parameters>

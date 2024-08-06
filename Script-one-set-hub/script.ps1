@@ -5,6 +5,7 @@ $batchSize = 5
 $sitePrefix = "cand05-S1"
 $credPath = "./credentials.xml"
 $jobs = @()
+$jobDefinitions = @()
 
 function Get-Stored-Credential {
     param (
@@ -37,6 +38,16 @@ Convert-PnPFolderToSiteTemplate -Folder $templateFolderPath -Out $templatePnpPat
 
 for ($i = 0; $i -lt $totalSites; $i += $batchSize) {
     $end = [math]::Min($i + $batchSize, $totalSites)
+    $jobDefinitions += [PSCustomObject]@{
+        Start = $i
+        End = $end
+        SitePrefix = $sitePrefix
+        TemplatePnpPath = $templatePnpPath
+        CredPath = $credPath
+    }
+}
+
+foreach ($jobDef in $jobDefinitions) {
     $jobs += Start-ThreadJob -ScriptBlock {
         param($start, $end, $sitePrefix, $templatePnpPath, $credPath)
 
@@ -54,7 +65,7 @@ for ($i = 0; $i -lt $totalSites; $i += $batchSize) {
                 $siteDescription = "Site $sitePrefix number $siteNumber"
 
                 Write-Host "Creating site: $siteUrl"
-                New-PnPSite -Type CommunicationSite -Url $siteUrl -Owner $adminEmail -Title $siteTitle -Description $siteDescription
+                New-PnPSite -Type CommunicationSite -Url $siteUrl -Owner $adminEmail -Title $siteTitle
 
                 Write-Host "Created site: $siteUrl"
                 Connect-PnPOnline -Url $siteUrl -Credentials $cred
@@ -66,7 +77,7 @@ for ($i = 0; $i -lt $totalSites; $i += $batchSize) {
                 Write-Error "Error processing ${siteTitle}: $_"
             }
         }
-    } -ArgumentList $i, $end, $sitePrefix, $templatePnpPath, $credPath
+    } -ArgumentList $jobDef.Start, $jobDef.End, $jobDef.SitePrefix, $jobDef.TemplatePnpPath, $jobDef.CredPath
 }
 
 Wait-Job -Job $jobs
