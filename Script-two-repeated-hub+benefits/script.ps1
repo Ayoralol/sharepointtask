@@ -44,7 +44,7 @@ for ($i = 0; $i -lt $totalSites; $i += $batchSize) {
     }
 }
 
-Write-Host "Connected and Creating Sites"
+Write-Host "Connected and Creating Sites - DONT DISCONNECT"
 
 foreach ($jobDef in $jobDefinitions) {
     $jobs += Start-ThreadJob -ScriptBlock {
