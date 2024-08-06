@@ -5,8 +5,8 @@ The scripts are written within respective folders:
 [./Script-two-repeated-hub+benefits/script.ps1](./Script-two-repeated-hub+benefits/script.ps1)  
 [./Script-three-one-hub+mult-benefits/script.ps1](./Script-three-one-hub+mult-benefits/script.ps1)
 
-Script One - Generates x amount of Benefits sites while having a hard-coded HubSiteUrl within the template.xml
-Script Two - Generate 1x Hub and 1x Benefits per "total site" count linked to each other
+Script One - Generates x amount of Benefits sites while having a hard-coded HubSiteUrl within the template.xml  
+Script Two - Generate 1x Hub and 1x Benefits per "total site" count linked to each other  
 Script Three - Generates a single new Hub and x amount of Benefits sites all linked to that hub using {parameter:HubUrl}
 
 Below is Script One
@@ -19,6 +19,7 @@ $batchSize = 5
 $sitePrefix = "cand05-S1"
 $credPath = "./credentials.xml"
 $jobs = @()
+$jobDefinitions = @()
 
 function Get-Stored-Credential {
     param (
@@ -49,8 +50,20 @@ Connect-PnPOnline -Url $spUrl -Credentials $cred
 
 Convert-PnPFolderToSiteTemplate -Folder $templateFolderPath -Out $templatePnpPath
 
+Write-Host "Connected and Creating Sites - DONT DISCONNECT"
+
 for ($i = 0; $i -lt $totalSites; $i += $batchSize) {
     $end = [math]::Min($i + $batchSize, $totalSites)
+    $jobDefinitions += [PSCustomObject]@{
+        Start = $i
+        End = $end
+        SitePrefix = $sitePrefix
+        TemplatePnpPath = $templatePnpPath
+        CredPath = $credPath
+    }
+}
+
+foreach ($jobDef in $jobDefinitions) {
     $jobs += Start-ThreadJob -ScriptBlock {
         param($start, $end, $sitePrefix, $templatePnpPath, $credPath)
 
@@ -68,7 +81,7 @@ for ($i = 0; $i -lt $totalSites; $i += $batchSize) {
                 $siteDescription = "Site $sitePrefix number $siteNumber"
 
                 Write-Host "Creating site: $siteUrl"
-                New-PnPSite -Type CommunicationSite -Url $siteUrl -Owner $adminEmail -Title $siteTitle -Description $siteDescription
+                New-PnPSite -Type CommunicationSite -Url $siteUrl -Owner $adminEmail -Title $siteTitle
 
                 Write-Host "Created site: $siteUrl"
                 Connect-PnPOnline -Url $siteUrl -Credentials $cred
@@ -80,13 +93,13 @@ for ($i = 0; $i -lt $totalSites; $i += $batchSize) {
                 Write-Error "Error processing ${siteTitle}: $_"
             }
         }
-    } -ArgumentList $i, $end, $sitePrefix, $templatePnpPath, $credPath
+    } -ArgumentList $jobDef.Start, $jobDef.End, $jobDef.SitePrefix, $jobDef.TemplatePnpPath, $jobDef.CredPath
 }
 
 Wait-Job -Job $jobs
 
 $jobs | ForEach-Object {
-    $jobResult = $_ | Receive-Job -AutoRemoveJob
+    $jobResult = $_ | Receive-Job -Wait -AutoRemoveJob
 
     if ($_.State -eq 'Completed') {
         Write-Host "Job $($_.Id) completed successfully."
